@@ -4489,17 +4489,19 @@ When called twice in a row, restore point and mark."
 (declare-function avy--process "avy")
 (declare-function avy--overlay-post "avy")
 
-(defun lispy-ace-char ()
+(defun lispy-ace-char (&optional arg)
   "Visually select a char within the current defun."
-  (interactive)
+  (interactive "p")
   (let ((avy-keys lispy-avy-keys))
     (avy-with lispy-ace-char
       (lispy--avy-do
        (string (read-char "Char: "))
-       (save-excursion
-         ;; `beginning-of-defun' won't work, since it can change sexp
-         (lispy--out-backward 50)
-         (lispy--bounds-dwim))
+       (case arg
+         (2 (save-excursion
+              ;; `beginning-of-defun' won't work, since it can change sexp
+              (lispy--out-backward 50)
+              (lispy--bounds-dwim)))
+         (t (lispy--bounds-dwim)))
        (lambda () t)
        lispy-avy-style-char))))
 
