@@ -100,6 +100,10 @@ The caller of `lispy--show' might use a substitute e.g. `describe-function'."
   :type 'float
   :group 'lispy)
 
+(defcustom lispy-inline-describe-point-func nil
+  "Function that returns point on where to begin inline documentation printing"
+  :type 'function)
+
 (defvar lispy-elisp-modes
   '(emacs-lisp-mode lisp-interaction-mode eltex-mode minibuffer-inactive-mode)
   "Modes for which `lispy--eval-elisp' and related functions are appropriate.")
@@ -201,12 +205,14 @@ Return t if at least one was deleted."
 (defun lispy--hint-pos ()
   "Point position for the first column of the hint."
   (save-excursion
-    (cond ((region-active-p)
-           (goto-char (region-beginning)))
-          ((eq major-mode 'python-mode)
-           (goto-char (beginning-of-thing 'sexp)))
-          (t
-           (lispy--back-to-paren)))
+    (cond ((bound-and-true-p lispy-inline-describe-point-func)
+	   (funcall lispy-inline-describe-point-func))
+	  ((region-active-p)
+	   (goto-char (region-beginning)))
+	  ((eq major-mode 'python-mode)
+	   (goto-char (beginning-of-thing 'sexp)))
+	  (t
+	   (lispy--back-to-paren)))
     (point)))
 
 (defun lispy--cleanup-overlay ()
