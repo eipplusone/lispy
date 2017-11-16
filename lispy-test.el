@@ -809,7 +809,8 @@ Insert KEY if there's no command."
                    "(list |[1 2])"))
   (should (string= (lispy-with "#2A((a b) (0 1))|" "\C-?")
                    "|"))
-
+  (should (string= (lispy-with-clojure "(partial filter neg?)|" "\C-?")
+                   "|"))
   (let ((lispy-delete-atom-from-within t))
     (should (string= (lispy-with "(|)" "\C-?") "|"))
     (should (string= (lispy-with "(|foo)" "\C-?") "|"))
@@ -2011,7 +2012,11 @@ Insert KEY if there's no command."
     (should (string= (lispy-with-clojure "|{\\a   \\b}" "i")
                      "|{\\a \\b}"))
     (should (string= (lispy-with-clojure "#?(:cljs   1   :clj 2)|" "i")
-                     "#?(:cljs 1 :clj 2)|"))))
+                     "#?(:cljs 1 :clj 2)|"))
+    (should (string= (lispy-with-clojure
+                      "|(#object[java.time.Instant 0x4aef4247 \"2017-11-13T18:42:13.209Z\"] )"
+                      "i")
+                     "|(#object[java.time.Instant 0x4aef4247 \"2017-11-13T18:42:13.209Z\"])"))))
 
 (defun lispy-test-normalize ()
   (interactive)
@@ -2201,7 +2206,10 @@ Insert KEY if there's no command."
                    "(progn\n  (take-out the-holy-pin\n            |)\n  (count-to-three))"))
   (should (string= (lispy-with "(progn\n  (take-out |the-holy-pin)\n  (count-to-three))"
                                (lispy-alt-line 2))
-                   "(progn\n  (take-out the-holy-pin)\n  |\n  (count-to-three))")))
+                   "(progn\n  (take-out the-holy-pin)\n  |\n  (count-to-three))"))
+  (should (string= (lispy-with ";; foo|"
+                               (lispy-alt-line))
+                   ";; foo\n|")))
 
 (ert-deftest lispy-outline-add ()
   (should (string= (lispy-with "|;;* Intro" "a")

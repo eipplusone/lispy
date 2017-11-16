@@ -55,9 +55,9 @@ Stripping them will produce code that's valid for an eval."
              (lispy--bounds-outline))
             ((looking-at "^def")
              (setq bnd (lispy-bounds-python-block)))
+            ((setq bnd (lispy-bounds-python-block)))
             ((bolp)
              (lispy--bounds-c-toplevel))
-            ((setq bnd (lispy-bounds-python-block)))
             ((lispy-bolp)
              (lispy--bounds-c-toplevel))
             (t
@@ -76,17 +76,13 @@ Stripping them will produce code that's valid for an eval."
 
 (defun lispy-eval-python-str ()
   (let* ((bnd (lispy-eval-python-bnd))
-         (str (lispy-trim-python
-               (lispy--string-dwim bnd))))
-    (when (string-match "\\`([^\0]*)\\'" str)
-      (setq str (replace-regexp-in-string "\n *" " " str)))
-    (replace-regexp-in-string
-     "(\n +" "("
-     (replace-regexp-in-string
-      ",\n +" ","
-      (replace-regexp-in-string
-       "\\\\\n +" ""
-       str)))))
+         (str1 (lispy-trim-python
+                (lispy--string-dwim bnd)))
+         (str1.5 (replace-regexp-in-string "^ *#[^\n]+\n" "" str1))
+         (str2 (replace-regexp-in-string "\\\\\n +" "" str1.5))
+         (str3 (replace-regexp-in-string "\n *\\([])}]\\)" "\\1" str2))
+         (str4 (replace-regexp-in-string "\\([({[,]\\)\n +" "\\1" str3)))
+    str4))
 
 (defun lispy-bounds-python-block ()
   (if (save-excursion
@@ -120,8 +116,12 @@ Stripping them will produce code that's valid for an eval."
               (when (setq bnd (lispy--bounds-string))
                 (goto-char (cdr bnd))))
             (end-of-line)
-            (while (member (char-before) '(?\\ ?\( ?\,))
-              (end-of-line 2))
+            (while (member (char-before) '(?\\ ?\( ?\, ?\[ ?\{))
+              (if (member (char-before) '(?\( ?\[ ?\{))
+                  (progn
+                    (up-list)
+                    (end-of-line))
+                (end-of-line 2)))
             (point)))))
 
 (defun lispy-eval-python (&optional plain)
@@ -142,7 +142,7 @@ Stripping them will produce code that's valid for an eval."
   (setq lispy-python-proc
         (cond ((consp x)
                (cdr x))
-              ((fboundp 'mash-new-lispy-python)
+              ((require 'mash-python nil t)
                (save-window-excursion
                  (get-buffer-process
                   (let ((shell-name (format "*python  %s*" x)))
@@ -188,9 +188,15 @@ it at one time."
       (let* ((python-shell-font-lock-enable nil)
              (inferior-python-mode-hook nil)
              (python-shell-interpreter
-              (if (file-exists-p python-shell-interpreter)
-                  (expand-file-name python-shell-interpreter)
-                python-shell-interpreter))
+              (cond
+                ((save-excursion
+                   (goto-char (point-min))
+                   (looking-at "#!\\(?:/usr/bin/env \\)\\(.*\\)$"))
+                 (match-string-no-properties 1))
+                ((file-exists-p python-shell-interpreter)
+                 (expand-file-name python-shell-interpreter))
+                (t
+                 python-shell-interpreter)))
              (python-binary-name (python-shell-calculate-command)))
         (setq process (get-buffer-process
                        (python-shell-make-comint
